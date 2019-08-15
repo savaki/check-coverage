@@ -8,4 +8,5 @@
 # ignore generated files
 #
 go.sum
+check-coverage
 

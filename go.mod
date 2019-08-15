@@ -1,4 +1,4 @@
-module github.com/savaki/coverage
+module github.com/savaki/check-coverage
 
 go 1.12
 
