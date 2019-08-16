@@ -15,8 +15,8 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -52,8 +52,7 @@ func main() {
 		},
 		cli.Float64Flag{
 			Name:        "c,coverage",
-			Value:       80,
-			Usage:       "code coverage threshold e.g. 70.0 -> 70%",
+			Usage:       "actual code coverage",
 			Destination: &opts.coverage.actual,
 		},
 		cli.StringFlag{
@@ -63,7 +62,8 @@ func main() {
 		},
 		cli.Float64Flag{
 			Name:        "m,minimum",
-			Usage:       "minimum desired coverage",
+			Value:       90,
+			Usage:       "minimum desired coverage; 90 == 90%",
 			Destination: &opts.coverage.minimum,
 		},
 		cli.StringFlag{
@@ -78,17 +78,20 @@ func main() {
 		},
 	}
 	app.Action = run
+	app.HideHelp = true
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 }
 
 type Record struct {
-	Key       string  `dynamodbav:"key"    ddb:"hash"`
-	Number    int     `dynamodbav:"number" ddb:"range"`
-	Coverage  float64 `dynamodbav:"coverage"`
-	CreatedAt string  `dynamodbav:"at"` // RFC3339
+	Key        string  `dynamodbav:"key"    ddb:"hash"`
+	Number     int     `dynamodbav:"number" ddb:"range"`
+	CommitHash string  `dynamodbav:"commit_hash,omitempty"`
+	Coverage   float64 `dynamodbav:"coverage"`
+	CreatedAt  string  `dynamodbav:"at"` // RFC3339
 }
 
 func makeKey(repo, branch string) string {
@@ -125,6 +128,11 @@ func run(_ *cli.Context) error {
 		table  = client.MustTable(opts.tableName, Record{})
 	)
 
+	err := table.CreateTableIfNotExists(context.Background(), ddb.WithBillingMode(dynamodb.BillingModePayPerRequest))
+	if err != nil {
+		return err
+	}
+
 	return checkCoverage(table, opts)
 }
 
@@ -137,8 +145,7 @@ func checkCoverage(table *ddb.Table, opts options) error {
 	}
 
 	if opts.coverage.minimum > 0 && opts.coverage.actual < last.Coverage {
-		fmt.Printf("ERROR: build coverage, %.1f%%, below prior build coverage, %.1f%% (desired minimum: %.1f%%)\n", opts.coverage.actual, last.Coverage, opts.coverage.minimum)
-		return fmt.Errorf("ERROR: coverage targets not met.  write tests to increase code coverage.")
+		return fmt.Errorf("ERROR: build coverage targets not met.  build coverage, %.1f%%, below prior build coverage, %.1f%% (desired coverage: %.1f%%)", opts.coverage.actual, last.Coverage, opts.coverage.minimum)
 	}
 
 	record := Record{

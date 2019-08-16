@@ -91,10 +91,11 @@ func TestCheckCoverage(t *testing.T) {
 
 			if tc.last > 0 {
 				last := Record{
-					Key:       makeKey(opts.repository, opts.branch),
-					Number:    1,
-					Coverage:  tc.last,
-					CreatedAt: time.Now().Format(time.RFC3339),
+					Key:        makeKey(opts.repository, opts.branch),
+					Number:     1,
+					CommitHash: opts.commit,
+					Coverage:   tc.last,
+					CreatedAt:  time.Now().Format(time.RFC3339),
 				}
 				if err := table.Put(last).Run(); err != nil {
 					t.Fatalf("got %v; want nil", err)
