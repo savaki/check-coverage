@@ -29,7 +29,7 @@ import (
 
 type coverage struct {
 	actual  float64
-	minimum float64
+	desired float64
 }
 
 type options struct {
@@ -55,16 +55,16 @@ func main() {
 			Usage:       "actual code coverage",
 			Destination: &opts.coverage.actual,
 		},
-		cli.StringFlag{
-			Name:        "h,hash",
-			Usage:       "commit hash",
-			Destination: &opts.commit,
-		},
 		cli.Float64Flag{
-			Name:        "m,minimum",
+			Name:        "d,desired",
 			Value:       90,
 			Usage:       "minimum desired coverage; 90 == 90%",
-			Destination: &opts.coverage.minimum,
+			Destination: &opts.coverage.desired,
+		},
+		cli.StringFlag{
+			Name:        "m,commit",
+			Usage:       "commit hash",
+			Destination: &opts.commit,
 		},
 		cli.StringFlag{
 			Name:        "r,repository",
@@ -78,7 +78,6 @@ func main() {
 		},
 	}
 	app.Action = run
-	app.HideHelp = true
 	err := app.Run(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -144,8 +143,8 @@ func checkCoverage(table *ddb.Table, opts options) error {
 		return err
 	}
 
-	if opts.coverage.minimum > 0 && opts.coverage.actual < last.Coverage {
-		return fmt.Errorf("ERROR: build coverage targets not met.  build coverage, %.1f%%, below prior build coverage, %.1f%% (desired coverage: %.1f%%)", opts.coverage.actual, last.Coverage, opts.coverage.minimum)
+	if opts.coverage.desired > 0 && opts.coverage.actual < last.Coverage {
+		return fmt.Errorf("ERROR: build coverage targets not met.  build coverage, %.1f%%, below prior build coverage, %.1f%% (desired coverage: %.1f%%)", opts.coverage.actual, last.Coverage, opts.coverage.desired)
 	}
 
 	record := Record{

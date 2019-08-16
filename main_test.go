@@ -83,7 +83,7 @@ func TestCheckCoverage(t *testing.T) {
 				commit: "blah",
 				coverage: coverage{
 					actual:  tc.actual,
-					minimum: tc.min,
+					desired: tc.min,
 				},
 				repository: "blah",
 				tableName:  tableName,
